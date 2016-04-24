@@ -216,7 +216,8 @@ Section~\ref{pre} provides preliminaries in process network
 and accelerator generation using HLS. Section~\ref{mainConvert} describes the main steps in transforming sequential programs
 to networks of processes. When implemented on FPGAs, these networks may experience deadlock issues, which can be analyzed and resolved with the method developed in section~\ref{deadlock}. To make our general approach more concrete, we presents a specific algorithm which fits into our PN generation framework in section~\ref{exampleAlgo}.
 This algorithm and its complementing optimizations are developed with FPGA as the target platform, thus the generated networks boast great performance when mapped onto the intended 
-computing substrate (section~\ref{expEval}). Finally, related work is presented in section~\ref{relatedwork}, before we conclude the paper with discussion and future directions (section~\ref{conclude}).
+computing substrate (section~\ref{expEval}). Finally, related work is presented in section~\ref{relatedwork}, before we conclude the paper (section~\ref{conclude}).
+%with discussion and future directions (section~\ref{conclude}).
 
 
 \section{Preliminaries}
@@ -595,7 +596,7 @@ would violate the consistency between $G(p)$ and $H$.
 \caption{Example PN for Deadlock Analysis
 \label{fig:example}}
 \end{center}
-\vspace{-1.5em}
+\vspace{-2.0em}
 \end{figure}
 
 \begin{figure*}[htp]
@@ -662,13 +663,24 @@ sizing and intra-process instruction scheduling,
 so we can better understand
 their joint effect on the liveness of the process network.
 
+
+
+\begin{figure}[htp]
+\begin{center}
+\includegraphics[width=0.8\linewidth]{fig/predGraphNew.pdf}
+\caption{Precedence Graph for Process Network
+\label{fig:predgraph}}
+\end{center}
+\vspace{-2.0em}
+\end{figure}
+
+
+
 \subsection{Precedence Graph for Deadlock Detection}
 To directly detect cycles from the schedules of processes as we have done in 
 figure~\ref{fig:2schedules} is unrealistic as each schedule may contain potentially infinite instruction invocations.
 However, HLS tools generate a short, repeatable schedule for each process.
 We can leverage it to create a more concise representation--precedence graph.
-
-
 
 
 An example of the precedence graph is shown in figure~\ref{fig:predgraph}, the schedules of instruction invocations are condensed into a small graph whose edges carry vector weights. 
@@ -690,16 +702,6 @@ we only need to look at the loads and stores from/to FIFOs.
 The graph is also rather sparse in the connectivity between these nodes.  
 Methods such as~\cite{doi:10.1137/0204007} can be used for efficient
 enumeration of the cycles and the subsequent identification of the deadlocks.
-
-
-\begin{figure}[htp]
-\begin{center}
-\includegraphics[width=0.8\linewidth]{fig/predGraphNew.pdf}
-\caption{Precedence Graph for Process Network
-\label{fig:predgraph}}
-\end{center}
-\vspace{-2.0em}
-\end{figure}
 
 Resolving
 the deadlock involves choosing one of the $DepF$ edges
@@ -741,14 +743,6 @@ needs to be bounded. This can be easily proven as a execution schedule construct
 To exploit the memory bandwidth more efficiently, burst mode memory accesses are often used as well. Even though the memory ``process" does not block on reads, if the response data it sends to other normal processes is not consumed promptly, it can blocked on writes. 
 The head-of-line blocking can then create a dependency cycle, resulting in a deadlock. Our precedence graph can be used to compute necessary buffer size to resolve this situation as well.
 
-\begin{figure}[htp]
-\begin{center}
-\includegraphics[width=1.05\linewidth]{fig/burstMem.pdf}
-\caption{Precedence Graph for Process Network
-\label{fig:memBurst}}
-\end{center}
-\vspace{-2.0em}
-\end{figure}
 
 
 Figure~\ref{fig:memBurst} illustrates how multiple burst mode memory accesses can
@@ -756,6 +750,14 @@ create a deadlock. The reaction of the memory is modelled by a pop action
 responding to the incoming request, and a push action producing one response data token. Meanwhile, the sending of memory requests and receiving of responses are decoupled and assigned to different slots in the process schedule. This is often done in HLS because of the long latency of memory accesses.
 For burst mode requests associated with a loop, the request sending is moved to outside of the loop as shown in the figure. The symbolic variable $B$ in the weight of the $DepM$ edge signifies how many tokens have to be consumed/buffered before the response for the next request ($data2$) become accessible for the response receiver. Assume the arbiter for the memory subsystem implements a policy which can potentially take in and serve multiple ($K$) consecutive requests from one stream, $B$ can be as big as $BurstSize_{max}*K$. 
 In the case of a round-robin arbiter, $B = BurstSize_{max}$ and for our experiment platform which uses AXI bus protocol, this number is 256. With the precedence graph, we can easily compute that the buffering for the two memory response channels needs to be increased to $B$ for the deadlocks to be resolved.
+\begin{figure}[htp]
+\begin{center}
+\includegraphics[width=1.05\linewidth]{fig/burstMem.pdf}
+\caption{Deadlock in Burst Memory Accesses
+\label{fig:memBurst}}
+\end{center}
+\vspace{-2.0em}
+\end{figure}
 
 \section{A Memory Centric Instruction Partitioning Algorithm}
 \label{exampleAlgo}
@@ -895,7 +897,6 @@ flow.
   \end{algorithmic}
 \end{algorithm}
 
-
 \section{Experimental Evaluation}
 \label{expEval}
 To measure the benefits our approach, a set of benchmarks are pushed through our flow. The partitioning algorithm described in section~\ref{exampleAlgo} is applied together with the optimization step formulated in part~\ref{opt}. These benchmarks are kernels with non-regular control flow and memory access patterns. Their description is listed in table~\ref{tab:datasize}. 
@@ -929,6 +930,31 @@ performance advantage over the conventional DMA+accelerator approach~\cite{vivad
 %\renewcommand{\tabcolsep}{0.5pt}
 
 %\vspace{-0.7em}
+
+
+
+The FPGA device used for our evaluation is Xilinx's Zynq-7000 XC7Z020 FPGA
+SoC. It contains two parts: an ARM based processing
+system (PS), and the programmable logic (PL). 
+The baseline for our evaluation is the performance of each kernel executing
+on the ARM core, which is an out-of-order, dual-issue hard processor running at 667MHz. Zynq also provides two
+options for the accelerators in PL to access the main memory: 
+through the accelerator coherence port (ACP), or the high performance (HP) port. 
+ACP connects to the snoop control unit in the PS, and 
+thus accesses the on-chip cache of the PS. On the other hand, the HP port connects
+directly to the memory controller, thus often incurs longer latency
+for data requests.
+\begin{comment}
+which necessitates the flushing of cache lines 
+by the processor if cached memory is accessed by the accelerator.
+In either case, if memory states are also buffered in the PL with caches, they 
+need to be explicitly pushed to the processing system side after the accelerator finishes running. 
+As both the ACP
+and the HP are slave ports, they provide no mechanisms to extract data from the programmable logic
+when the ARM processor is running. The interaction between the generated accelerators
+and the main pieces of the FPGA SoC is shown in figure~\ref{fig:ippf}.
+\end{comment}
+
 \begin{table}[htbp]
 \caption{Benchmark Descriptions}
 %\vspace{-1.2em}
@@ -956,9 +982,9 @@ performance advantage over the conventional DMA+accelerator approach~\cite{vivad
   &Memory Accesses Depend on Computation       &   \\
 %\cline{2-3}                                                             
 \hline
-\multirow{2}{*}{}Depth-First&  Number of Nodes = 4000 & \multirow{2}{*}{$\approx$ 3 MB}  \\
+\multirow{2}{*}{} &    & \multirow{2}{*}{$\approx$ 3 MB}  \\
 %\cline{2-3}                                                                                                                                                    
- Search & Number of Neighbors per Node = 200       &   \\
+   &         &   \\
 %\cline{2-3}                                                                        
 \hline            
 \multirow{2}{*}{}SpMV& Matrix in Compressed Row Storage & \multirow{2}{*}{ $\approx$ 16 MB}  \\
@@ -973,31 +999,6 @@ performance advantage over the conventional DMA+accelerator approach~\cite{vivad
 \end{table}
 
 
-
-The FPGA device used for our evaluation is the Zynq-7000 XC7Z020 FPGA
-SoC from Xilinx, installed on the ZedBoard evaluation platform. The SoC contains two parts: an ARM-processor based processing
-system (PS), and the programmable logic (PL). 
-The baseline for our evaluation is the performance of each software kernel running
-on the ARM core in the PS. 
-The core is an out-of-order, dual-issue hard
-processor running at 667MHz. The Zynq platform also provides two
-options for the accelerators in PL to access the main memory subsystem: 
-through the accelerator coherence port (ACP), or the high performance (HP) port. 
-The former connects to the snoop control unit in the processing system and 
-thus uses/modifies the processing system's on chip cache. The HP port connects
-directly to the memory controller, thus often imposes a longer round-trip latency
-for data requests.
-\begin{comment}
-which necessitates the flushing of cache lines 
-by the processor if cached memory is accessed by the accelerator.
-In either case, if memory states are also buffered in the PL with caches, they 
-need to be explicitly pushed to the processing system side after the accelerator finishes running. 
-As both the ACP
-and the HP are slave ports, they provide no mechanisms to extract data from the programmable logic
-when the ARM processor is running. The interaction between the generated accelerators
-and the main pieces of the FPGA SoC is shown in figure~\ref{fig:ippf}.
-\end{comment}
-
 \begin{comment}
 \begin{figure}[htp]
 \begin{center}
@@ -1011,7 +1012,7 @@ and the main pieces of the FPGA SoC is shown in figure~\ref{fig:ippf}.
 
 \begin{figure*}[htp]
 \begin{center}
-\includegraphics[width=0.95\linewidth]{fig/perf.pdf}
+\includegraphics[width=0.95\linewidth]{fig/perfNew.pdf}
 \caption{Performance of Conventional Accelerators and Accelerator Networks, normalized to the hard ARM core. Implementations with caches use
 Xilinx System Cache IP, configured to be 64KB and 2-way associative   
 \label{fig:acpraw}}
@@ -1021,7 +1022,7 @@ Xilinx System Cache IP, configured to be 64KB and 2-way associative
 
 
 In our study, Vivado HLS, a state-of-the-art high level synthesis tool provided by Xilinx,
-is used to generate the accelerators for the original sequential code, as well as the processes created by our flow. With the target clock period set to 
+is used to create the accelerators for the original sequential code, as well as the processes generated by our flow. With the target clock period set to 
 8ns during HLS, the tightest timing constraints post place \& route implementations managed to meet range from 111 to 150MHz. 
 All design points shown in this section 
 use the highest achievable frequency as the actual operating clock frequency. 
@@ -1029,28 +1030,20 @@ use the highest achievable frequency as the actual operating clock frequency.
 \subsection{Performance Comparisons}
 In figure~\ref{fig:acpraw}, 
 performance of the different implementations are presented. 
-Conventional accelerators and dataflow accelerators with different memory subsystem
+Conventional accelerators and accelerator networks with different memory subsystem
 configurations are compared. All the numbers are normalized to the baseline.
 
-In all four benchmarks, conventional accelerators directly generated from software kernels using the HLS flow
-actually have lower performance than the hard processor. Even with
-on-PL caches, 
-these accelerators only manage to achieve throughput less than 50\% that of the baseline. 
-The superscalar, 
-out-of-order ARM core is capable of exploiting instruction level parallelism to a good extent 
-and also has a high performance on-chip cache.
-The additional parallelism extracted by the HLS tool is evidently not enough
-to compensate for the clock frequency advantage the hard processor core has over the programmable logic and the longer data access
-latency from the reconfigurable array. 
+In all four benchmarks, conventional accelerators directly generated from software kernels actually have lower performance than the hard processor. Even with
+on-PL caches, they can only achieve throughput less than 50\% that of the baseline.
+The superscalar, out-of-order ARM core is capable of exploiting instruction level parallelism to a good extent and also has a high performance on-chip cache.
+The additional parallelism exploited by the HLS flow is evidently not enough
+to compensate for the clock frequency advantage the hard processor core has over the programmable logic and the longer data access latency from the reconfigurable array. 
 
 With our methodology, the accelerator networks generated 
 are rather competitive against the hard processor, even
-without a reconfigurable cache. For SpMV multiply, knapsack and Floyd-Warshall, when the networks are directly connected to the memory through the ACP, 
-the average performance is 2.3x that of the baseline---representing
-an 8.4x gain over the conventional accelerators.
-Upon the addition of caches,  
-the average runtime of the accelerator networks was reduced by 18.7\%,  while that of the conventional
-accelerators was cut by 45.4\%. The gap between their performance is thereby reduced from 8.4 to 5.6 times. This difference in improvement is due to conventional accelerators' sensitivity to the latency of data accesses, which is also manifested by its performance degradation of 40\% when the uncached HP port is used instead of ACP. 
+without a reconfigurable cache. When the networks are directly connected to the memory through the ACP, the average performance is 2.3x that of the baseline---an 8.4x gain over the conventional accelerators. 
+With the addition of caches,  
+the average runtime of the accelerator networks was reduced by 18.7\%,  while that of the conventional accelerators was cut by 45.4\%. The gap between their performance is thereby reduced from 8.4x to 5.6x. This difference in improvement is due to conventional accelerators' sensitivity to the latency of data accesses, which is also manifested by its performance degradation of 40\% when the uncached HP port is used instead of ACP. 
 
 \begin{comment}
 It is also apparent that our approach has its limitations, as demonstrated by its ineffectiveness in the 
@@ -1062,9 +1055,8 @@ Thus there were only small differences between the performance of the convention
 does not provide many opportunities for optimizations. As a result, both accelerators achieves performance far below that of the baseline.
 \end{comment}
 
-Overall, for kernels suitable for FPGA acceleration, there is a significant performance advantage in using
-an intermediate dataflow architectural template. If we compare the best results achieved with the
-dataflow accelerators to that of the conventional accelerators, we see improvement
+Overall, there is a significant performance advantage in the accelerator network as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
+accelerator networks to that of the conventional accelerators, we see improvement
 of 3.3 to 9.1 times, with an average of 5.6. 
 %This performance advantage translates to energy savings as well, as illustrated in the next section.
 
@@ -1077,7 +1069,7 @@ of 3.3 to 9.1 times, with an average of 5.6.
 \subsection{Area comparison}
 To quantify the impact of our proposed methodology on area, 
 we have compared the FPGA resouce usage of conventional accelerators and
-the dataflow accelerators.
+the accelerator networks.
 Table~\ref{tab:areacom} shows the results, 
 where each acclerator is complemented with two different memory subsystem configurations.
 \renewcommand{\tabcolsep}{0.5pt}
@@ -1096,30 +1088,35 @@ where each acclerator is complemented with two different memory subsystem config
   %                 & LUT &FFs&  BRAM &  LUT &   FFs      & BRAM   \\
   \hline            
   \hline            
-\multirow{3}{*}{}&Con.Acc  & 9873 &9116 &10 & 7918 & 6792 & 21  \\
-\cline{2-8}                                                                                                                                                    
-SpMV &Dataflow Acc       & 8577 & 8837& 10 & 6718  &6788 & 21\\
-\cline{2-8}                                                                                                             
-    Multiply   &\% change & -13.1 &-3.1 & 0 & -15.2  & -0.1 & 0  \\
-  \hline                                                                                                           
-\multirow{3}{*}{}&Con.Acc  & 7672 &7490 &8 & 6573 & 5885 & 21  \\
-\cline{2-8}                                                                                                                                                    
-Knapsack &Dataflow Acc       & 8089 & 8787& 8 & 6970  &7256 & 21\\
-\cline{2-8}                                                                                                             
-       &\% change & +5.4 &+17.3 & 0 & +6.0  & +23.3 & 0  \\
-  \hline                                                                                                           
+                                                                                                
+                                                                                                    
 \multirow{3}{*}{}&Con.Acc  & 2491 &3528 &0 &3806  &4629  &19   \\
 \cline{2-8}                                                                                                                                                    
-Floyd- &Dataflow Acc       & 7659 &7210 &0  &8995  &8309 &19 \\
+Floyd- &Acc. Network       & 7659 &7210 &0  &8995  &8309 &19 \\
 \cline{2-8}                                                                                                             
  Warshall      &\% change &+207.5  &+104.3 & 0 & +104.4  & +79.5  & 0  \\
-  \hline                                                                                                           
+  \hline                                                                           
+  
+  \multirow{3}{*}{}&Con.Acc  & 7672 &7490 &8 & 6573 & 5885 & 21  \\
+\cline{2-8}                                                                                                                                                    
+Knapsack &Acc. Network       & 8089 & 8787& 8 & 6970  &7256 & 21\\
+\cline{2-8}                                                                                                             
+       &\% change & +5.4 &+17.3 & 0 & +6.0  & +23.3 & 0  \\
+  \hline       
+  
+  
 \multirow{3}{*}{}&Con.Acc  & 4810 &4929 &4 & 4931 & 4594 & 21  \\
 \cline{2-8}                                                                                                                                                    
-DFS &Dataflow Acc       & 8509 & 7813& 4 & 7436  &6298 & 21\\
+DFS &Acc. Network       & 8509 & 7813& 4 & 7436  &6298 & 21\\
 \cline{2-8}                                                                                                             
        &\% change & +76.9 &+58.5 & 0 & +50.8  & +37.1 & 0  \\
-  \hline                                                                                                           
+  \hline                                                                        
+  \multirow{3}{*}{}&Con.Acc  & 9873 &9116 &10 & 7918 & 6792 & 21  \\
+\cline{2-8}                                                                                                                                                    
+SpMV &Acc. Network       & 8577 & 8837& 10 & 6718  &6788 & 21\\
+\cline{2-8}                                                                                                             
+    Multiply   &\% change & -13.1 &-3.1 & 0 & -15.2  & -0.1 & 0  \\
+  \hline           
 
 \end{tabular}
 \label{tab:areacom}
@@ -1166,15 +1163,8 @@ used appropriately, can significantly improve the quality of the generated compu
 
 \section{Conclusions}
 \label{conclude}
-This paragraph will end the body of this sample document.
-Remember that you might still have Acknowledgments or
-Appendices; brief samples of these
-follow.  There is still the Bibliography to deal with; and
-we will make a disclaimer about that here: with the exception
-of the reference to the \LaTeX\ book, the citations in
-this paper are to articles which have nothing to
-do with the present subject and are used as
-examples only.
+In this paper, we presented a framework with which sequential programs can be
+transformed to networks of processes. Using HLS as our backend, they can then be implemented as accelerator networks on FPGA. Compare to accelerators directly synthesized from the original program, and software running on a hard CPU core with much higher clock frequency, our final implementations can achieve significantly better performance.
 %\end{document}  % This is where a 'short' article might terminate
 
 %ACKNOWLEDGMENTS are optional
