@@ -142,10 +142,9 @@ John Wawrzynek \\%\titlenote{The secretary disavows any knowledge of this author
 This paper describes a general framework in
 transforming a sequential program into a network of processes, which are
 converted to hardware accelerators through high level synthesis.
-A complementing technique is also proposed to statically analyze the behaviors of the 
-generated accelerator network.
+A complementing technique is also proposed to perform static deadlock analysis for the generated accelerator network.
 The interactions between the accelerators' schedules, the capacity of communication
-channels in the network and the memory access mechanisms are incorporated
+channels in the network and the memory access mechanisms are all incorporated
 into our model, such that potential artificial deadlocks can be detected and resolved \textit{a priori}.
 
 An algorithm optimized for FPGA implementation is then developed and applied through our transformation framework. A set of irregular computation kernels are converted into networks of accelerators on FPGA. 
@@ -163,7 +162,7 @@ accelerator networks achieve significantly better performance.
 
 %\terms{Theory}
 
-\keywords{high level synthesis, process network, system design flow,  parallelism, hardware accelerator}
+\keywords{process network, high level synthesis, system design flow, hardware accelerator}
 
 \section{Introduction}
 As the growth of processor clock frequency came to a stop in the middle of the last decade, the performance boost provided by the continuous advancement of hardware technology for sequential programs could no longer be sustained. The benefits of user transparent CPU architecture optimizations were also diminishing. With the recent advent of FPGA SoCs~\cite{chips:zynq}, offloading computation to hardware accelerators becomes a promising alternative for
@@ -175,7 +174,7 @@ high level synthesis (HLS), substantial user inputs are still required to create
 efficient implementations~\cite{7082747}. To address this problem, we envision a two
 step process, where the sequential specification provided by the user is first
 transformed to a more parallel representation, from which the conventional HLS
-can easily create high performance compute engine.
+can easily create a high performance compute engine.
 
 \begin{comment}
 As parallel computers and more recently, heterogeneous computing platforms become mainstream, it becomes more and more challenging to bridge the gap between the intuitive imperative programming paradigm and the underlying compute substrate.  
@@ -193,7 +192,7 @@ Using FPGA as the computing device, our final implementations are accelerator ne
 Our major contributions include:
 \begin{itemize}
     \item We devise a general approach for converting a sequential program to a network
-of concurrent processes. Different algorithms can potentially be plugged into the flow, splitting computations between processes in different ways, optimized for the underlying computing substrates.
+of concurrent processes. Different algorithms can potentially be plugged into the flow, splitting computations between processes in different ways, optimized for the underlying compute substrates.
     \item With FPGA as our target platform, processes are to be converted to hardware accelerators. We
     propose an analysis framework to statically detect and resolve deadlocks in the accelerator networks, ensuring the correctness of the execution. 
     \item We develop an algorithm to generate instances of process networks
@@ -211,17 +210,20 @@ performance improvement.
 \end{comment}
 
 The rest of the paper is organized as follows:
-Section~\ref{pre} provides preliminaries in process network
+Section~\ref{pre} looks at background and related work in process network
 %intermediate representation of the sequential program,
 and accelerator generation using HLS. Section~\ref{mainConvert} describes the main steps in transforming sequential programs
-to networks of processes. When implemented on FPGAs, these networks may experience deadlock issues, which can be analyzed and resolved with the method developed in section~\ref{deadlock}. To make our general approach more concrete, we presents a specific algorithm which fits into our PN generation framework in section~\ref{exampleAlgo}.
-This algorithm and its complementing optimizations are developed with FPGA as the target platform, thus the generated networks boast great performance when mapped onto the intended 
-computing substrate (section~\ref{expEval}). Finally, related work is presented in section~\ref{relatedwork}, before we conclude the paper (section~\ref{conclude}).
+to networks of processes. When implemented on FPGAs, these networks may experience deadlock issues, which can be statically analyzed and resolved with the method developed in section~\ref{deadlock}. To make our general approach more concrete, we presents a specific algorithm which fits into our PN generation framework in section~\ref{exampleAlgo}.
+This algorithm is developed with FPGA as the target platform, thus the generated networks boast great performance when mapped onto the intended 
+compute substrate (section~\ref{expEval}). Finally, we conclude the paper in section~\ref{conclude}.
 %with discussion and future directions (section~\ref{conclude}).
 
 
-\section{Preliminaries}
+\section{Background and Related Work}
 \label{pre}
+
+
+
 \begin{comment}
 A typical program written for processor execution 
 is sequential in its semantics. Techniques to
@@ -240,27 +242,57 @@ actual implementation on physical computing devices.
 
 \subsection{Process Networks}
 \label{pre1}
-The process network, or Kahn process network~\cite{gilles1974semantics}, is an inherently
-parallel model of computation where processes communicate with
-each other through unbounded FIFO channels. 
-The processes cannot test for availability of data tokens in 
-the channels without consuming them. If a channel is empty
-the process blocks as it reads from the channel.
-Writing to the FIFOs, however, is non-blocking.
-In addition, each FIFO can only be consumed by a single process, and be written to by a single process. The PN model is deterministic in the sense that the scheduling of
+
+\begin{comment}
+Parallelizing sequential programs by transforming them to process networks was attempted in multiple past projects. The Compaan flow~\cite{mat2pn} takes Matlab code and generates
+process networks. ESPAM~\cite{4378214}\cite{c2stream}, on the otherhand, uses sequential C as the input language and also provides an efficient method to compute the needed FIFO size. They also have extension for implementing the PN on FPGAs. However, the targets of their flow are highly regular kernels with statically analyzable memory access patterns, which are quite different than the benchmarks we have applied our framework to. 
+
+
+
+Finally, HLS for FPGAs are being active developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}. Researchers
+have also tried different programming paradigms~\cite{Lebedev:2010:MMA:1935936.1936078}
+to expose greater amount of parallelism to HLS. Our work complements
+HLS by providing a higher level transformation infrastructure which, when
+used appropriately, can significantly improve the quality of the generated compute engine.
+\end{comment}
+
+
+
+
+
+The process network, or Kahn process network~\cite{gilles1974semantics}, is an inherently parallel model of computation where processes communicate with
+each other through unbounded FIFO channels.
+The processes block when they read from empty channels but never block when writing.
+%The processes cannot test for availability of data tokens in 
+%the channels without consuming them. If a channel is empty
+%the process blocks as it reads from the channel.
+%Writing to the FIFOs, however, is non-blocking.
+%In addition, each FIFO can only be consumed by a single process, and be written to by a single process.
+The PN model is deterministic in the sense that the scheduling of
 the process execution does not alter the final results. This gives great flexibility
 in implementing/controlling each individual processes. 
 
-A characteristic of PN is that all data exchanges are performed over the FIFOs and the notion of a shared global memory does not exist. A program executing on 
-a processor however, always have instructions communicating with each other temporally using
-the memory. In this work, we bridge this difference by modeling data access as inter-process communication.
+%A characteristic of PN is that all data exchanges are performed over the FIFOs and the notion of a shared global memory does not exist. A program executing on 
+%a processor however, always have instructions communicating with each other temporally using
+%the memory. In this work, we bridge this difference by modeling data access as inter-process communication.
+
+A characteristic
+of KPN is that all data exchange are performed over the FIFOs and the notion of
+a shared global memory does not exist in the model. Previous works
+converting sequential programs to process networks~\cite{mat2pn}\cite{c2stream}
+were able to convert original memory operations to explicit data communication
+at the boundary of the generated hardware as the targeted kernels are highly 
+regular. In this study however, we target kernels with irregular memory accesses and the final implementations are to be used along side a general purpose processor. We therefore preserve the shared memory, but conceptually model data accesses as inter-process communications.
+%the memory model needs to be preserved. It is therefore necessary to conceptually
+%translate the behavior of processes accessing memory to that of inter-process
+%communication.
 %such that our deadlock analysis can also take into account the accelerators' interaction with the memory. 
 More specifically, the memory, and its associated interconnect can be seen as a special process which takes in address/data tokens and produces data/acknowledge tokens. In the case where multiple memory ports are exposed, this ``process" does not block on read, as it can choose to serve any port with valid
 requests. This behavior is similar to the ``select" function in YAPI~\cite{Kock00yapi:application}, which introduced non-determinism. In our framework however, the non-determinism is addressed by a set of special mechanisms, which will be explained in section~\ref{mainConvert:mem}.
 
 
 Another necessary deviation from the ideal PN model lies in the capacity of the channels.
-In any practical implementations of process network, the FIFOs cannot be unbounded. 
+In any practical implementations of process network, the FIFOs cannot be unbounded.
 Consequently, writes may block and deadlocks can potentially happen. 
 These are so-called artificial deadlocks, as their occurrence is introduced by the nonideality of the implementation and the circular dependency formed %in these deadlocks 
 always contain operations writing to a full FIFO.
@@ -268,8 +300,10 @@ always contain operations writing to a full FIFO.
 %can block on writes (responses to other processes), when a large amount of data returned are not consumed promptly. It may therefore also contribute to the development of artificial deadlocks. 
 In a process network, % generated from a sequential program, 
 these deadlocks, if left unresolved, would cause a mismatch between
-the resultant behavior of the original code and the network. This issue is addressed by our
-analysis technique described in section~\ref{deadlock}. 
+the resultant behavior of the original code and the network. To tackle this problem, many approaches were proposed over the years, most of which involves monitoring execution and dynamically incrementing FIFO sizes when deadlock occurs~\cite{parks1995bounded}\cite{Geilen:2003:REK:1765712.1765736}\cite{4217338},
+or only targets highly regular kernels.
+%This is due to the infeasibility of analyzing deadlock for generic process networks at compile time. 
+In our flow, we ensure, by construction, each FIFO is only read/written by a single instruction in each process, which makes the generated PN easier to analyze than a generic PN. We can therefore use a static analysis framework to find the needed FIFO sizes.
 
 \begin{comment}
 \subsection{Intermediate Representation for Sequential Programs}
@@ -283,17 +317,21 @@ Meanwhile, every instruction defines a new variable in SSA, thus the dataflow be
 
 \subsection{High Level Synthesis of Accelerators}
 \label{pre2}
-A typical HLS tool attempts to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance, it generates hardware in the form of RTL.
-Compute operations and data accesses are allocated and scheduled according to the dependency constraints extracted from the input program, and the resource constraints imposed by the target platform. The circuits generated usually follow a Finite State Machine with Datapath (FSMD) paradigm. Activation of a particular operator in the datapath is associated
+HLS for FPGAs are being active developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}.
+These HLS tools attempt to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance, it generates hardware in the form of RTL. 
+%Compute operations and data accesses are allocated and scheduled according to the %dependency constraints extracted from the input program, and the resource %constraints imposed by the target platform. 
+The synthesized circuits usually follow a Finite State Machine with Datapath (FSMD) paradigm. Activation of a particular operator in the datapath is associated
 with a certain clock cycle and the execution of the computation engine is orchestrated by a synthesized central controller. 
 
 With this static scheduling of operations, the accelerators' runtime behavior is rather simple. Different parts
 of the generated circuit run in lockstep with each other, no dynamic dependency checking mechanisms,
 such as scoreboarding or load-store queueing, are needed.
 This rigid scheduling of operators, while producing simpler hardware with smaller area,
-is also vulnerable to stalls introduced by cache misses or variable latency operations. This often results in suboptimal performance when the accelerators
+is also vulnerable to stalls introduced by cache misses or variable latency operations.
+This often results in suboptimal performance when the accelerators
 are mapped onto FPGAs. The algorithm in section~\ref{exampleAlgo}, was developed to
 specifically deal with this issue. Thus the networks generated with the algorithm, when implemented physically, have much better performance. 
+
 
 \begin{comment}
 Depending on the system architecture, the generated hardware can have
@@ -420,7 +458,6 @@ The insertion of the sender/receiver of the barrier happens after the instructio
 an extra store/load operation is introduced into the set of instructions, associated
 with the basic block where the barrier occurs.
 \end{comment}
-
 \subsubsection{Optimizing Communication v.s. Computation}
 \label{opt}
  Regardless of exactly how the instructions are partitioned, as each process performs its computation locally, the necessity to communicate with its peers can incur implementation overheads.
@@ -608,8 +645,8 @@ would violate the consistency between $G(p)$ and $H$.
 \vspace{-2.0em}
 \end{figure*}
 
-Figure~\ref{fig:example} is a simple generated PN we use to illustrate this problem. The original program is converted to a two process network
-with two single slot communication channels between them.
+Figure~\ref{fig:example} is an example PN we can use to illustrate this problem. The original loop is converted to a two-process network
+with two single slot communication channels.
 Figure~\ref{fig:2schedules} then shows the scheduling and communication of the processes. Each instruction invocation is prefixed with a vector, representing its place in the (j,i) iteration space, and three types of dependency edges are used
 to show the necessary precedence among these invocations. There is no cycle of
 dependency in (a), and therefore no deadlocks, when both processes execute in program order. However, in (b), 
@@ -671,7 +708,7 @@ their joint effect on the liveness of the process network.
 \caption{Precedence Graph for Process Network
 \label{fig:predgraph}}
 \end{center}
-\vspace{-2.0em}
+\vspace{-2.5em}
 \end{figure}
 
 
@@ -711,9 +748,7 @@ is increased by 1, the weight on its corresponding $DepF$ becomes (0,-2). Conseq
 a total weight (0,-1), when the original artificial deadlock disappears.
 In general, for every deadlock causing cycle, the $DepF$ edge whose channel has the smallest width can be selected for capacity expansion, so the cost of these extra slots is minimized. This heuristic does not necessarily produce an absolute
 global optimal solution in the presence of multiple deadlock causing cycles, but suffices for our use cases.
-\begin{comment}
-Of course, as multiple non-negatively weighted cycles can be present simultaneously, the absolute global optimal solution would involve finding a set of $DepF$ edges, and minimize the aggregate cost of incrementing each for all cycles to be resolved. This is an NP hard problem
-\end{comment}
+
 %\subsection{Modelling Burst Mode Memory Access}
 
 
@@ -721,26 +756,9 @@ Of course, as multiple non-negatively weighted cycles can be present simultaneou
 
 
 
-\begin{comment}
-
-In~\cite{}, KPNs are 
-categorized into strictly bounded, bounded and unbounded ones.
-A KPN is strictly bounded if and only if any execution of of the network requires bounded space. It is bounded if and only if there are some
-execution requiring bounded space while it is unbounded if and only if any
-execution requires unbounded space. Methods to find bounds for communication channels
-in KPNs were discussed in~\cite{}\cite{}. In general, whether a
-KPN is bounded is undecidable~\cite{}, but for our process networks, which
-are generated from sequential programs expressed in single static assignment
-form, we can analyze the boundedness of the FIFO channels in various
-scenarios.
-
-To manifest the same behavior as the original sequential program, the generated network
-needs to be bounded. This can be easily proven as a execution schedule constructed according to the original 
-
-\end{comment}
 
 \subsection{Deadlocks in Memory Accesses}
-To exploit the memory bandwidth more efficiently, burst mode memory accesses are often used as well. Even though the memory ``process" does not block on reads, if the response data it sends to other normal processes is not consumed promptly, it can blocked on writes. 
+To exploit the memory bandwidth more efficiently, burst mode memory accesses are often used in accelerators. Even though the memory ``process" does not block on reads, if the response data it sends to other normal processes is not consumed promptly, it can blocked on writes. 
 The head-of-line blocking can then create a dependency cycle, resulting in a deadlock. Our precedence graph can be used to compute necessary buffer size to resolve this situation as well.
 
 
@@ -756,7 +774,7 @@ In the case of a round-robin arbiter, $B = BurstSize_{max}$ and for our experime
 \caption{Deadlock in Burst Memory Accesses
 \label{fig:memBurst}}
 \end{center}
-\vspace{-2.0em}
+\vspace{-3.0em}
 \end{figure}
 
 \section{A Memory Centric Instruction Partitioning Algorithm}
@@ -906,26 +924,6 @@ in improving the overall performance.
 
 %Due to the presence of statically unknown off-chip memory accesses, these benchmarks are good cases where our algorithm can play a significant role in improving the overall performance. 
 
-\begin{comment}
-The benchmarks data footprints of the benchmarks
-are listed in table~\ref{tab:datasize}
-
-To evaluate the benefits of our approach, we took several benchmark kernels
-and processed them with our flow. For sparse matrix vector (SpMV) multiply---our
-first kernel---compressed sparse
-row (CSR) format is used to store the matrix, where the loads of the floating
-point numbers to be multiplied depend on the data in an index array.
-The next two kernels, Knapsack and Floyd-Warshall, are both dynamic programming problems. The memory
-addresses to be accessed are derived from the results of computation.
-Our final kernel, Depth first search (DFS), is a widely used graph algorithm. The benchmarked version
-operates on pointer based data structure and uses a stack. All these kernels
-are sequential code with non-regular control flow and memory access patterns. 
-The input dataset for each benchmark, as described by 
-Table~\ref{tab:datasize}, is also too big to fit entirely on chip. 
-Due to the presence of statically unknown off-chip memory accesses, these benchmarks are good cases where our algorithm can play a significant role in improving the overall performance.
-On the other hand, for problems where the entire data set can be buffered on chip or when the memory access patterns are regular, our approach would offer little
-performance advantage over the conventional DMA+accelerator approach~\cite{vivado_hls:appnoteMMult}.
-\end{comment}
 
 %\renewcommand{\tabcolsep}{0.5pt}
 
@@ -944,16 +942,6 @@ ACP connects to the snoop control unit in the PS, and
 thus accesses the on-chip cache of the PS. On the other hand, the HP port connects
 directly to the memory controller, thus often incurs longer latency
 for data requests.
-\begin{comment}
-which necessitates the flushing of cache lines 
-by the processor if cached memory is accessed by the accelerator.
-In either case, if memory states are also buffered in the PL with caches, they 
-need to be explicitly pushed to the processing system side after the accelerator finishes running. 
-As both the ACP
-and the HP are slave ports, they provide no mechanisms to extract data from the programmable logic
-when the ARM processor is running. The interaction between the generated accelerators
-and the main pieces of the FPGA SoC is shown in figure~\ref{fig:ippf}.
-\end{comment}
 
 \begin{table}[htbp]
 \caption{Benchmark Descriptions}
@@ -995,29 +983,19 @@ and the main pieces of the FPGA SoC is shown in figure~\ref{fig:ippf}.
   \hline      
   
 \end{tabular}
+\vspace{-2.0em}
 \label{tab:datasize}
 \end{table}
 
 
-\begin{comment}
-\begin{figure}[htp]
-\begin{center}
-\includegraphics[width=0.9\linewidth]{fig/system.pdf}
-\caption{Implementation of Dataflow Accelerators in FPGA SoC  
-\label{fig:ippf}}
-\end{center}
-%\vspace{-1.0em}
-\end{figure} 
-\end{comment}
 
 \begin{figure*}[htp]
 \begin{center}
 \includegraphics[width=0.95\linewidth]{fig/perfNew.pdf}
-\caption{Performance of Conventional Accelerators and Accelerator Networks, normalized to the hard ARM core. Implementations with caches use
-Xilinx System Cache IP, configured to be 64KB and 2-way associative   
+\caption{Performance of Conventional Accelerators and Accelerator Networks
 \label{fig:acpraw}}
 \end{center}
-\vspace{-2.7em}
+\vspace{-2.9em}
 \end{figure*} 
 
 
@@ -1032,6 +1010,7 @@ In figure~\ref{fig:acpraw},
 performance of the different implementations are presented. 
 Conventional accelerators and accelerator networks with different memory subsystem
 configurations are compared. All the numbers are normalized to the baseline.
+Design points with caches are using Xilinx System Cache IP, configured to be 64KB and 2-way associative.   
 
 In all four benchmarks, conventional accelerators directly generated from software kernels actually have lower performance than the hard processor. Even with
 on-PL caches, they can only achieve throughput less than 50\% that of the baseline.
@@ -1044,16 +1023,6 @@ are rather competitive against the hard processor, even
 without a reconfigurable cache. When the networks are directly connected to the memory through the ACP, the average performance is 2.3x that of the baseline---an 8.4x gain over the conventional accelerators. 
 With the addition of caches,  
 the average runtime of the accelerator networks was reduced by 18.7\%,  while that of the conventional accelerators was cut by 45.4\%. The gap between their performance is thereby reduced from 8.4x to 5.6x. This difference in improvement is due to conventional accelerators' sensitivity to the latency of data accesses, which is also manifested by its performance degradation of 40\% when the uncached HP port is used instead of ACP. 
-
-\begin{comment}
-It is also apparent that our approach has its limitations, as demonstrated by its ineffectiveness in the 
-depth first search benchmark.
-The kernel performs very little computing but lots of memory accesses.
-The use of a stack in DFS also creates a dependence cycle through the memory
-and consequently, the performance is fundamentally limited by the latency of memory access.
-Thus there were only small differences between the performance of the conventional accelerator and the dataflow accelerator. Besides, the memory access pattern
-does not provide many opportunities for optimizations. As a result, both accelerators achieves performance far below that of the baseline.
-\end{comment}
 
 Overall, there is a significant performance advantage in the accelerator network as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
 accelerator networks to that of the conventional accelerators, we see improvement
@@ -1069,9 +1038,8 @@ of 3.3 to 9.1 times, with an average of 5.6.
 \subsection{Area comparison}
 To quantify the impact of our proposed methodology on area, 
 we have compared the FPGA resouce usage of conventional accelerators and
-the accelerator networks.
-Table~\ref{tab:areacom} shows the results, 
-where each acclerator is complemented with two different memory subsystem configurations.
+the accelerator networks. Table~\ref{tab:areacom} shows the results, 
+where each implementation is complemented with two different memory subsystem configurations.
 \renewcommand{\tabcolsep}{0.5pt}
 \begin{table}[htbp]
 %\vspace{-1.2em}
@@ -1123,11 +1091,12 @@ SpMV &Acc. Network       & 8577 & 8837& 10 & 6718  &6788 & 21\\
 \end{table}
 
 
-The difference in area between the dataflow accelerators and the conventional accelerators is effected by
-two factors.  
-When the dataflow architectural template is used, there are always additional costs associated with the communication channels. Meanwhile, as
-the original programs are partitioned into subgraphs and separately turned into hardware, the depth of the internal 
-pipeline in each module is reduced, resulting in area savings. 
+The difference in area between the accelerator network and the conventional accelerators is effected by
+two factors. The accelerator networks always have additional costs associated with
+the FIFOs and communication primitives. On the other hand, the accelerator generated for each individual process in the network has reduced pipeline depth, resulting in area savings.
+%When the dataflow architectural template is used, there are always additional costs associated with the communication channels. Meanwhile, as
+%the original programs are partitioned into subgraphs and separately turned into hardware, the depth of the internal 
+%pipeline in each module is reduced, resulting in area savings. 
 %as compared to the instantiation
 %of the same set of operators in conventional accelerators. 
 %For instance,
@@ -1142,29 +1111,13 @@ ultimately application specific.
 
 
 
-\section{Related Work}
-\label{relatedwork}
-Parallelizing sequential programs by transforming them to process networks was attempted in multiple past projects. The Compaan flow~\cite{mat2pn} takes Matlab code and generates
-process networks. ESPAM~\cite{4378214}\cite{c2stream}, on the otherhand, uses sequential C as the input language and also provides an efficient method to compute the needed FIFO size. They also have extension for implementing the PN on FPGAs. However, the targets of their flow are highly regular kernels with statically analyzable memory access patterns, which are quite different than the benchmarks we have applied our framework to. 
-
-For FIFO sizing and deadlock resolution in process networks, many approaches were proposed over the years. Most of these involves monitoring execution and dynamically incrementing FIFO sizes when deadlock occurs~\cite{parks1995bounded}\cite{Geilen:2003:REK:1765712.1765736}\cite{4217338}, 
-due to the infeasibility of analyzing deadlock for generic process networks at compile time. In our flow, we ensure, by construction, each FIFO is only read/written by a single instruction in each process, a graph based static analysis framework can be used to find the needed FIFO sizes.
-
-Finally, HLS for FPGAs are being active developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}. Researchers
-have also tried different programming paradigms~\cite{Lebedev:2010:MMA:1935936.1936078}
-to expose greater amount of parallelism to HLS. Our work complements
-HLS by providing a higher level transformation infrastructure which, when
-used appropriately, can significantly improve the quality of the generated compute engine.
-
-
-
 
 
 
 \section{Conclusions}
 \label{conclude}
 In this paper, we presented a framework with which sequential programs can be
-transformed to networks of processes. Using HLS as our backend, they can then be implemented as accelerator networks on FPGA. Compare to accelerators directly synthesized from the original program, and software running on a hard CPU core with much higher clock frequency, our final implementations can achieve significantly better performance.
+transformed to networks of processes. With HLS, they can be implemented as accelerator networks on FPGA. Compare to accelerators directly synthesized from the original program, and software running on a hard CPU core with much higher clock frequency, our final implementations can achieve significantly better performance.
 %\end{document}  % This is where a 'short' article might terminate
 
 %ACKNOWLEDGMENTS are optional
