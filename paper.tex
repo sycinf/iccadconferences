@@ -294,8 +294,7 @@ requests. This behavior is similar to the ``select'' function in YAPI~\cite{Kock
 Another necessary deviation from the ideal PN model lies in the capacity of the channels.
 In any practical implementations of process networks, the FIFOs cannot be unbounded.
 Consequently, in cases with circular dependencies, when buffers fill up writes may block and deadlocks can occur. 
-These are so-called artificial deadlocks, as their occurrence is introduced by the nonideality of the implementation. % and the circular dependency formed %in these deadlocks 
-always contain operations writing to a full FIFO.
+These are so-called artificial deadlocks, as their occurrence is introduced by the nonideality of the implementation. % and the circular dependency formed %in these deadlocks always contain operations writing to a full FIFO.
 %Note the memory ``process", which does not block on reads,
 %can block on writes (responses to other processes), when a large amount of data returned are not consumed promptly. It may therefore also contribute to the development of artificial deadlocks. 
 In a process network, % generated from a sequential program, 
@@ -318,7 +317,7 @@ Meanwhile, every instruction defines a new variable in SSA, thus the dataflow be
 \subsection{High Level Synthesis of Accelerators}
 \label{pre2}
 HLS for FPGAs are being actively developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}.
-These HLS tools attempt to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance these tools generates hardware in the form of RTL. 
+These HLS tools attempt to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance, these tools generate hardware in the form of RTL. 
 %Compute operations and data accesses are allocated and scheduled according to the %dependency constraints extracted from the input program, and the resource %constraints imposed by the target platform. 
 The synthesized circuits usually follow a Finite State Machine with Datapath (FSMD) paradigm. Activation of a particular operator in the datapath is associated
 with a certain clock cycle and the execution of the computation engine is orchestrated by a synthesized central controller. 
@@ -971,10 +970,9 @@ for data requests.
   &Memory Accesses Depend on Computation       &   \\
 %\cline{2-3}                                                             
 \hline
-\multirow{2}{*}{} &    & \multirow{2}{*}{$\approx$ 3 MB}  \\
+\multirow{2}{*}{}Depth-First&  Stack-based Graph Algo. & \multirow{2}{*}{$\approx$ 3 MB}  \\
 %\cline{2-3}                                                                                                                                                    
-   &         &   \\
-%\cline{2-3}                                                                        
+ Search & Irregular Memory Access Pattern       &   \\
 \hline            
 \multirow{2}{*}{}SpMV& Matrix in Compressed Row Storage & \multirow{2}{*}{ $\approx$ 16 MB}  \\
 %\cline{2-3}                                                                                                                                                    
@@ -993,10 +991,11 @@ for data requests.
 \begin{figure*}[htp]
 \begin{center}
 \includegraphics[width=0.95\linewidth]{fig/perfNew.pdf}
+\vspace{-1.0em}
 \caption{Performance of Conventional Accelerators and Accelerator Networks
 \label{fig:acpraw}}
 \end{center}
-\vspace{-2.9em}
+\vspace{-2.0em}
 \end{figure*} 
 
 
@@ -1021,11 +1020,21 @@ to compensate for the clock frequency advantage the hard processor core has over
 
 With our methodology, the accelerator networks generated 
 are rather competitive against the hard processor, even
-without a reconfigurable cache. When the networks are directly connected to the memory through the ACP, the average performance is 2.3x that of the baseline---an 8.4x gain over the conventional accelerators. 
+without a reconfigurable cache.  For Floyd-Warshall, knapsack and SpMV multiply, when the networks are directly connected to the memory through the ACP, the average performance is 2.3x that of the baseline---an 8.4x gain over the conventional accelerators. 
 With the addition of caches,  
 the average runtime of the accelerator networks was reduced by 18.7\%,  while that of the conventional accelerators was cut by 45.4\%. The gap between their performance is thereby reduced from 8.4x to 5.6x. This difference in improvement is due to conventional accelerators' sensitivity to the latency of data accesses, which is also manifested by its performance degradation of 40\% when the uncached HP port is used instead of ACP. 
 
-Overall, there is a significant performance advantage in the accelerator networks as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
+
+
+
+Our partitioning algorithm also has its limitations, as demonstrated by its ineffectiveness in the depth first search benchmark.
+The kernel performs very little computing but lots of memory accesses.
+The use of a stack in DFS also creates a dependence cycle through the memory.
+Consequently, the performance is fundamentally limited by the latency of memory access.
+Thus there were only small differences between the performance of the conventional accelerator and the accelerator network, both of which achieve throughput far below that of the baseline.
+
+
+Overall, for kernels suitable for FPGA acceleration, there is a significant performance advantage in the accelerator networks as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
 accelerator networks to that of the conventional accelerators, we see improvement
 of 3.3 to 9.1 times, with an average of 5.6. 
 %This performance advantage translates to energy savings as well, as illustrated in the next section.
@@ -1043,7 +1052,7 @@ the accelerator networks. Table~\ref{tab:areacom} shows the results,
 where each implementation is complemented with two different memory subsystem configurations.
 \renewcommand{\tabcolsep}{0.5pt}
 \begin{table}[htbp]
-%\vspace{-1.2em}
+\vspace{-1.5em}
 \caption{Resource Usage of Accelerators.}
 %\vspace{-1.2em}
 \scriptsize
@@ -1088,6 +1097,7 @@ SpMV &Acc. Network       & 8577 & 8837& 10 & 6718  &6788 & 21\\
   \hline           
 
 \end{tabular}
+\vspace{-1.5em}
 \label{tab:areacom}
 \end{table}
 
