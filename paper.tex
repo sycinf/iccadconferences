@@ -139,16 +139,16 @@ John Wawrzynek \\%\titlenote{The secretary disavows any knowledge of this author
 \end{comment}
 \maketitle
 \begin{abstract}
-This paper describes a general framework in
-transforming a sequential program into a network of processes, which are
+This paper describes a general framework for
+transforming a sequential program into a network of processes, which are then
 converted to hardware accelerators through high level synthesis.
-A complementing technique is also proposed to perform static deadlock analysis for the generated accelerator network.
-The interactions between the accelerators' schedules, the capacity of communication
+Also proposed is a complementing technique for performing static deadlock analysis of the generated accelerator network.
+The interactions between the accelerators' schedules, the capacity of the communication
 channels in the network and the memory access mechanisms are all incorporated
 into our model, such that potential artificial deadlocks can be detected and resolved \textit{a priori}.
 
-An algorithm optimized for FPGA implementation is then developed and applied through our transformation framework. A set of irregular computation kernels are converted into networks of accelerators on FPGA. 
-Compare to hardware accelerators generated without going through our transformation, the
+An algorithm optimized for FPGA implementation is developed and applied through our transformation framework. A set of irregular computation kernels are converted into networks of FPGA accelerators.
+Compared to hardware accelerators generated without going through our transformation, the
 accelerator networks achieve significantly better performance.
 
 
@@ -169,17 +169,17 @@ As the growth of processor clock frequency came to a stop in the middle of the l
 achieving better system efficiency. However,
 %To create good implementation in the spatial computing
 %paradigm however, is far less intuitive compare to imperative programming.
-there is a big gap between the inherently parallel mode of operation in hardware accelerators and the intuitive imperative programming paradigm. Even with tool flows like
+there is a large gap between the inherently parallel mode of operation in hardware accelerators and the intuitive imperative programming paradigm. Even with tool flows like
 high level synthesis (HLS), substantial user inputs are still required to create
 efficient implementations~\cite{7082747}. To address this problem, we envision a two
 step process, where the sequential specification provided by the user is first
-transformed to a more parallel representation, from which the conventional HLS
+transformed to a more parallel representation, from which conventional HLS
 can easily create a high performance compute engine.
 
 \begin{comment}
-As parallel computers and more recently, heterogeneous computing platforms become mainstream, it becomes more and more challenging to bridge the gap between the intuitive imperative programming paradigm and the underlying compute substrate.  
-In the context of building hardware accelerators on FPGA accelerator
-One solution is to leverage more user input, which explicitly specifies the parallelism or
+As parallel computers, and more recently, heterogeneous computing platforms become mainstream, it becomes more and more challenging to bridge the gap between the intuitive imperative programming paradigm and the underlying compute substrate.  
+In the context of building hardware accelerators on FPGAs,
+one solution is to leverage more user input, which explicitly specifies the parallelism or
 
 
 Various parallel programming models were developed with the expectation of users explicitly specifying parallelism in the code. There are also tool chains which converts sequential code to 
@@ -187,16 +187,16 @@ hardware accelerators on FPGAs, but more often than not, the big
 \end{comment}
 
 %In this paper, we explore the transformation from sequential programs to networks of processes.
-In this paper, we explore this approach by using a modified version of process network (PN), a parallel model of computation, as the target representation for our transformation.
+In this paper, we explore this approach by using a modified version of the process network (PN), a parallel model of computation, as the target representation for our transformation.
 Using FPGA as the computing device, our final implementations are accelerator networks optimized to achieve high throughput in the presence of long data access latency.
-Our major contributions include:
+Our major contributions include the following.
 \begin{itemize}
     \item We devise a general approach for converting a sequential program to a network
-of concurrent processes. Different algorithms can potentially be plugged into the flow, splitting computations between processes in different ways, optimized for the underlying compute substrates.
+of concurrent processes. Different algorithms can potentially be inserted into the flow, splitting computations between processes in different ways, optimized for the underlying compute substrates.
     \item With FPGA as our target platform, processes are to be converted to hardware accelerators. We
     propose an analysis framework to statically detect and resolve deadlocks in the accelerator networks, ensuring the correctness of the execution. 
     \item We develop an algorithm to generate instances of process networks
-particularly amenable to hardware acceleration. Using high level synthesis (HLS), we mapped them onto FPGAs
+particularly amenable to hardware acceleration. Using high level synthesis (HLS), we map them onto FPGAs
 to demonstrate the benefits of our approach. 
 \end{itemize}
 
@@ -210,10 +210,10 @@ performance improvement.
 \end{comment}
 
 The rest of the paper is organized as follows:
-Section~\ref{pre} looks at background and related work in process network
+Section~\ref{pre} looks at background and related work in process networks
 %intermediate representation of the sequential program,
 and accelerator generation using HLS. Section~\ref{mainConvert} describes the main steps in transforming sequential programs
-to networks of processes. When implemented on FPGAs, these networks may experience deadlock issues, which can be statically analyzed and resolved with the method developed in section~\ref{deadlock}. To make our general approach more concrete, we presents a specific algorithm which fits into our PN generation framework in section~\ref{exampleAlgo}.
+to networks of processes. When implemented on FPGAs, these networks may experience deadlock issues, which can be statically analyzed and resolved with the method developed in section~\ref{deadlock}. To make our general approach more concrete, we present a specific algorithm which fits into our PN generation framework in section~\ref{exampleAlgo}.
 This algorithm is developed with FPGA as the target platform, thus the generated networks boast great performance when mapped onto the intended 
 compute substrate (section~\ref{expEval}). Finally, we conclude the paper in section~\ref{conclude}.
 %with discussion and future directions (section~\ref{conclude}).
@@ -278,7 +278,7 @@ in implementing/controlling each individual processes.
 
 A characteristic
 of KPN is that all data exchange are performed over the FIFOs and the notion of
-a shared global memory does not exist in the model. Previous works
+a shared global memory does not exist in the model. Previous work
 converting sequential programs to process networks~\cite{mat2pn}\cite{c2stream}
 were able to convert original memory operations to explicit data communication
 at the boundary of the generated hardware as the targeted kernels are highly 
@@ -287,14 +287,14 @@ regular. In this study however, we target kernels with irregular memory accesses
 %translate the behavior of processes accessing memory to that of inter-process
 %communication.
 %such that our deadlock analysis can also take into account the accelerators' interaction with the memory. 
-More specifically, the memory, and its associated interconnect can be seen as a special process which takes in address/data tokens and produces data/acknowledge tokens. In the case where multiple memory ports are exposed, this ``process" does not block on read, as it can choose to serve any port with valid
-requests. This behavior is similar to the ``select" function in YAPI~\cite{Kock00yapi:application}, which introduced non-determinism. In our framework however, the non-determinism is addressed by a set of special mechanisms, which will be explained in section~\ref{mainConvert:mem}.
+More specifically, the memory, and its associated interconnect can be seen as a special process which takes in address/data tokens and produces data/acknowledge tokens. In the case where multiple memory ports are exposed, this ``process'' does not block on read, as it can choose to serve any port with valid
+requests. This behavior is similar to the ``select'' function in YAPI~\cite{Kock00yapi:application}, which introduced non-determinism. In our framework however, the non-determinism is addressed by a set of special mechanisms, as explained in section~\ref{mainConvert:mem}.
 
 
 Another necessary deviation from the ideal PN model lies in the capacity of the channels.
-In any practical implementations of process network, the FIFOs cannot be unbounded.
-Consequently, writes may block and deadlocks can potentially happen. 
-These are so-called artificial deadlocks, as their occurrence is introduced by the nonideality of the implementation and the circular dependency formed %in these deadlocks 
+In any practical implementations of process networks, the FIFOs cannot be unbounded.
+Consequently, in cases with circular dependencies, when buffers fill up writes may block and deadlocks can occur. 
+These are so-called artificial deadlocks, as their occurrence is introduced by the nonideality of the implementation. % and the circular dependency formed %in these deadlocks 
 always contain operations writing to a full FIFO.
 %Note the memory ``process", which does not block on reads,
 %can block on writes (responses to other processes), when a large amount of data returned are not consumed promptly. It may therefore also contribute to the development of artificial deadlocks. 
@@ -309,7 +309,7 @@ In our flow, we ensure, by construction, each FIFO is only read/written by a sin
 \subsection{Intermediate Representation for Sequential Programs}
 Our PN generation flow is built on top of the LLVM framework~\cite{Lattner:2004:LCF:977395.977673}, which uses a single static assignment (SSA) intermediate representation (IR). 
 A typical function in a sequential program is represented with
-a control flow graph. This is a two level hierarchical structure. Instructions are contained within basic blocks who are connected by directional edges representing control transfers. 
+a control flow graph. This is a two level hierarchical structure. Instructions are contained within basic blocks which are connected by directional edges representing control transfers. 
 Meanwhile, every instruction defines a new variable in SSA, thus the dataflow between instructions are explicit and well defined.  
 \end{comment}
 
@@ -317,8 +317,8 @@ Meanwhile, every instruction defines a new variable in SSA, thus the dataflow be
 
 \subsection{High Level Synthesis of Accelerators}
 \label{pre2}
-HLS for FPGAs are being active developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}.
-These HLS tools attempt to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance, it generates hardware in the form of RTL. 
+HLS for FPGAs are being actively developed in both industry~\cite{tools:vivadohls} and academia~\cite{tools:legup}.
+These HLS tools attempt to capture parallelism in a function written with high level languages like C/C++. With the help of various user provided guidance these tools generates hardware in the form of RTL. 
 %Compute operations and data accesses are allocated and scheduled according to the %dependency constraints extracted from the input program, and the resource %constraints imposed by the target platform. 
 The synthesized circuits usually follow a Finite State Machine with Datapath (FSMD) paradigm. Activation of a particular operator in the datapath is associated
 with a certain clock cycle and the execution of the computation engine is orchestrated by a synthesized central controller. 
@@ -354,12 +354,12 @@ process network
 \label{mainConvert}
 Our PN generation flow is built on top of the LLVM framework~\cite{Lattner:2004:LCF:977395.977673}, which uses a single static assignment (SSA) intermediate representation (IR). 
 A typical function in a sequential program is represented with
-a control flow graph (CFG). This is a two level hierarchical structure. Instructions are contained within basic blocks who are connected by directional edges representing control transfers. 
-Meanwhile, every instruction defines a new variable in SSA, thus the data dependencies between instructions are explicit and well defined.  
+a control flow graph (CFG). This is a two level hierarchical structure. Instructions are contained within basic blocks which are connected by directional edges representing control transfers. 
+Meanwhile, every instruction defines a new variable in the SSA representation, thus the data dependencies between instructions are explicit and well defined.  
 %The CDFG representing a function is a hierarchical structure.
 %Instructions are contained within basic blocks, which are
 %connected by directional control edges. 
-To generate process
+To generate the process
 network from this representation, a few main steps are performed:
 \begin{itemize}
 \begin{comment}
@@ -375,7 +375,7 @@ each other, are partitioned into multiple sets. This is the core part of the flo
 
 \item \textit{CFG Reconstruction:} From each set of instruction nodes, a CFG is reconstructed
 to form a self-containing process. Dependencies between the instruction
-nodes are realized by the communications between the recreated CFGs. 
+nodes are realized by the communication between the recreated CFGs. 
 \begin{comment}
 \item \textit{Accelerator Network Generation:} The reconstructed CDFGs are pushed through
 high level synthesis, producing an array of communicating hardware accelerators. Linked together
@@ -393,19 +393,19 @@ The simplest way to insert these edges is to have every instruction dependent on
 predecessors of its container basic blocks. However, we take a more aggressive approach, looking for the earliest control transfer which necessarily leads to the execution of an instruction.
 Given an instruction $i$ and its container basic block $bb$, our
 flow looks for the nearest set of basic blocks $BB'$ who are not properly post-dominated by $bb$,
-and insert the dependency edge between the branch instructions ending each member of $BB'$ and $i$. Compare to the naive predication, this approach use a single control edge to replace a sequence of edges traversing multiple branches, reducing the overall communication
-overhead in the network. Also with the elimination of unnecessary edges, the subsequent steps can be more flexible, potentially leading to more efficient final implementation.
+and insert the dependency edge between the branch instructions ending each member of $BB'$ and $i$. Compared to naive predication, this approach use a single control edge to replace a sequence of edges traversing multiple branches, reducing the overall communication
+overhead in the network. Also with the elimination of unnecessary edges, the subsequent steps can be more flexible, potentially leading to a more efficient final implementation.
 
-Another type of dependencies are implicitly carried by memory accesses. When
-two memory accesses target the same location and one of
-them is a store, their order in the original program execution
-needs to be preserved--a dependency edge is added
+Another type of dependency is implicitly carried by memory accesses. When
+two memory accesses target the same location and one
+is a store, their order in the original program execution
+needs to be preserved---a dependency edge is added
 between them. We try to avoid adding unnecessary edges as they
 can potentially affect the instruction partitioning negatively. 
 The flow currently relies on alias analysis to perform partitioning of the memory space. No edges are inserted for accesses to disjoint memory partitions. 
 Meanwhile, for code harder to analyze, the flow can take in user annotations, complementing the overly conservative compile time analysis. With the addition of these edges, the ordering of requests sent to the memory
 subsystem is constrained to be consistent with the original program execution.
-The non-determinism caused by memory selecting amongst multiple requests no longer
+The non-determinism caused by memory selecting among multiple requests no longer
 impacts the final outcome. In general, for any pair of instructions separated into two sets, the necessary ordering between them is enforced by the cut edges,
 which will eventually be converted to communication channels between processes.
 
@@ -456,7 +456,7 @@ The insertion of the sender/receiver of the barrier happens after the instructio
 an extra store/load operation is introduced into the set of instructions, associated
 with the basic block where the barrier occurs.
 \end{comment}
-\subsubsection{Optimizing Communication v.s. Computation}
+\subsubsection{Optimizing Communication vs. Computation}
 \label{opt}
  Regardless of exactly how the instructions are partitioned, as each process performs its computation locally, the necessity to communicate with its peers can incur implementation overheads.
 For each communication channel, buffer space is to be allocated, and sender/receiver primitives also need to be inserted. Therefore, it is sometimes beneficial to duplicate some nodes after the instruction partitioning. Given sets of instruction nodes created after applying a platform-specific algorithm, for each individual set $G$, the problem of whether to copy other instruction nodes into $G$ can be formulated as an integer programming problem. 
@@ -507,7 +507,7 @@ The set of recreated basic blocks $B$ are thus associated with either the instru
 %$d$ is used as the entry block for our new CFG. Basic blocks in the path from $d$ to
 %every basic block $b \in B$ are added to the CFG 
 The insertion of load and store operations is to accommodate various
-dependencies between the processes. Note each pair of these inserted communication primitive is associated with a single instruction in the original CFG.The flow of
+dependencies between the processes. Note that each pair of these inserted communication primitive is associated with a single instruction in the original CFG. The flow of
 tokens between them ensures the execution path are synchronized across different CFGs
 and the right operands are supplied for computations distributed across the
 process network. 
@@ -558,8 +558,8 @@ float foo(float* x, float* prod, int* ind)
 }
 \end{lstlisting}
 When this network runs, it writes the same data into the memory, and eventually return
-the same value as the original program. As it completes execution, its processes will either return or be blocked on empty FIFO. However, whether it can successfully complete hinges on
-the absence of artificial deadlocks, which we are going to look at next.
+the same value as the original program. As it completes execution, its processes will either return or be blocked on an empty FIFO. However, whether it can successfully complete hinges on
+the absence of artificial deadlocks---which we look at next.
 
 \begin{comment}
 During the execution, the same data 
@@ -586,7 +586,6 @@ process network.
 
 
 
-
 \section{Artificial Deadlock Analysis}
 \label{deadlock}
 \subsection{Boundedness of the Generated PNs}
@@ -594,7 +593,7 @@ As mentioned in section~\ref{pre1}, it is impossible to have unbounded communica
 For a general PN, its boundedness is an undecidable problem~\cite{parks1995bounded}. However, for the process networks generated using our scheme, 
 %we can first show it is possible to execute within bounded space, and
 %then find the FIFO space necessary to ensure the absence of artificial deadlocks. 
-we can easily show their boundedness by constructively create a schedule of operations.
+we can easily show their boundedness by constructively creating a schedule of operations.
 
 The main observation here is that for every token sending instruction, there is a corresponding token consuming instruction. Furthermore, they both derive from the same instruction in the CFG before partitioning. Therefore, we can create a schedule $H$ for our network following the execution of instructions in the original program. For every instruction executed in the original CFG, we schedule the PN's instructions derived from it in $H$. If these instructions are involved in communication, the source of the data tokens is scheduled first, immediately followed by the token sinks. It should be apparent that only one slot is needed
 in each communication channel for the process network to execute, since the produced tokens are promptly consumed.
@@ -612,9 +611,13 @@ as long as $G(p), \forall p \in PN$ are locally consistent with $H$,
 artificial deadlock will not occur in $PN$. 
 \end{lemma}
 
-Assume there is an artificial deadlock, we can go around the dependency
-cycle and examine the blocked processes $P_b \subseteq PN$. For a process $p_b$
-to be blocked at instruction  invocation $j_0$, $j_0$ is either reading from an empty FIFO, or writing to a full FIFO. For the former case, the FIFO is empty because the token's producer instruction $j_0' \in p_b'$ cannot execute, which indicates an earlier instruction  $i_k'$ in $G(p_b')$ is blocked. For the later case, the FIFO is full because the token produced by an earlier invocation $j_{-1}$ has not been taken by its corresponding consumer instruction $j''_{-1} \in p_b''$. This also indicates an earlier instruction $l_n''$ in $G(p'')$ is blocked. Apply this reasoning recursively around the circle of dependencies,
+Assuming there is an artificial deadlock, we can go around the dependency
+cycle and examine the blocked processes $P_b \subseteq PN$. 
+For a process $p_b$ to be blocked at instruction invocation $j_0$, $j_0$ is either reading from an empty FIFO, or writing to a full FIFO. 
+For the former case, the FIFO is empty because the token's producer instruction $j_0' \in p_b'$ cannot execute, which indicates an earlier instruction  $i_k'$ in $G(p_b')$ is blocked. 
+For the later case, the FIFO is full because the token produced by an earlier invocation $j_{-1}$ has not been taken by its corresponding consumer instruction $j''_{-1} \in p_b''$. 
+This also indicates an earlier instruction $l_n''$ in $G(p'')$ is blocked. 
+Applying this reasoning recursively around the circle of dependencies,
 we should have a chain of precedence among instructions invocations $j_0 \succ i_k' \succ ... \succ j_0$
 or $j_0 \succ j''_{-1} \succ l_n'' \succ ... \succ j_0$ in $H$. %As all invocations of instructions in the chains come from schedules locally consistent with a single schedule $H$, 
 Both chains are self-contradictory and therefore, the scenario for artificial deadlock can never occur. 
@@ -692,14 +695,13 @@ Unfortunately, in a network implemented in hardware, the FIFO size cannot be eas
 %respect to other instructions in their own process, blocking write causes
 %artificial deadlock. Increasing the number of slots in the FIFO can help resolve
 %this problem. 
-To determine the needed buffer space in the channels \textit{a priori}, simulations are sometimes used~\cite{buck1994ptolemy}. It relies 
-on using representative dataset as input and% for certain type of problems, simulation results 
+To determine the required buffer space in the channels \textit{a priori}, simulations are sometimes used~\cite{buck1994ptolemy}. It relies 
+on using representative datasets as input and% for certain type of problems, simulation results 
 may not provide any guarantees.%, especially if the control flow is runtime data dependent. 
 In this section, we want to analyze the interaction between FIFO
 sizing and intra-process instruction scheduling, 
 so we can better understand
 their joint effect on the liveness of the process network.
-
 
 
 \begin{figure}[htp]
@@ -712,15 +714,14 @@ their joint effect on the liveness of the process network.
 \end{figure}
 
 
-
 \subsection{Precedence Graph for Deadlock Detection}
 To directly detect cycles from the schedules of processes as we have done in 
 figure~\ref{fig:2schedules} is unrealistic as each schedule may contain potentially infinite instruction invocations.
 However, HLS tools generate a short, repeatable schedule for each process.
-We can leverage it to create a more concise representation--precedence graph.
+We can leverage this fact to create a more concise representation---a precedence graph.
 
 
-An example of the precedence graph is shown in figure~\ref{fig:predgraph}, the schedules of instruction invocations are condensed into a small graph whose edges carry vector weights. 
+An example of a precedence graph is shown in figure~\ref{fig:predgraph}, the schedules of instruction invocations are condensed into a small graph whose edges carry vector weights. 
 %As illustrated in the figure, in a schedule of a multiple level loop nest, the instruction invocations can be annotated with subscripts representing their position in the iteration space. For instance, instruction executed in the second iteration of the inner loop within the third iteration of the outer loop has subscript (3,2). Also, outer loop instruction
 %invocations carry 1 at the position of the vector corresponding to the inner loop level. 
 The weights of the $DepS$ edges are simply the worst case differences between the vector prefixes of invocations of a pair of instructions. 
@@ -730,7 +731,7 @@ to the number of slots in the FIFO. For our example, the edge from store(r1Q,r1)
 It means the previous invocation of the consumer instruction needs to complete before the producer instruction can write more tokens. The $DepD$ edges, on the other hand, always have weight $\vec{0}$ as the consumer depends on the producer with the same iteration vector. In essence, this graph
 summarizes the necessary precedence between instruction invocations. 
 
-In the precedence graph, every simple cycle has a weight sum which is also a vector. An deadlock is manifested as a cycle with weight being the zero vector ($\vec{0}$) or vectors whose first non-zero elements (leading elements) are positive.
+In the precedence graph, every simple cycle has a weight sum which is also a vector. A deadlock manifests as a cycle with weight being the zero vector ($\vec{0}$) or vectors whose first non-zero elements (leading elements) are positive.
 They indicate an instruction invocation depending on itself or a later invocation in the execution, and thus a deadlock. 
 The computation to find deadlocks may potentially be expensive. In the worst case, the number of simple cycles in the graph can be exponential in
 $|V|$, the number of nodes in the graph. However, practically, the number of
@@ -742,7 +743,7 @@ enumeration of the cycles and the subsequent identification of the deadlocks.
 
 Resolving
 the deadlock involves choosing one of the $DepF$ edges
-in the cycle and add enough slots (making the weight more negative)
+in the cycle and adding enough slots (making the weight more negative)
 such that the weight of the cycle gets a negative leading element. For our example in figure~\ref{fig:predgraph}, if the capacity of r1Q
 is increased by 1, the weight on its corresponding $DepF$ becomes (0,-2). Consequently, the identified cycle in the figure would have
 a total weight (0,-1), when the original artificial deadlock disappears.
@@ -758,16 +759,16 @@ global optimal solution in the presence of multiple deadlock causing cycles, but
 
 
 \subsection{Deadlocks in Memory Accesses}
-To exploit the memory bandwidth more efficiently, burst mode memory accesses are often used in accelerators. Even though the memory ``process" does not block on reads, if the response data it sends to other normal processes is not consumed promptly, it can blocked on writes. 
-The head-of-line blocking can then create a dependency cycle, resulting in a deadlock. Our precedence graph can be used to compute necessary buffer size to resolve this situation as well.
+To exploit the memory bandwidth more efficiently, burst mode memory accesses are often used in accelerators. Even though the memory ``process'' does not block on reads, if the response data it sends to other normal processes is not consumed promptly, it can blocked on writes. 
+The head-of-line blocking can then create a dependency cycle, resulting in a deadlock. Our precedence graph can be used to compute the necessary buffer size to resolve this situation as well.
 
 
 
 Figure~\ref{fig:memBurst} illustrates how multiple burst mode memory accesses can
 create a deadlock. The reaction of the memory is modelled by a pop action
 responding to the incoming request, and a push action producing one response data token. Meanwhile, the sending of memory requests and receiving of responses are decoupled and assigned to different slots in the process schedule. This is often done in HLS because of the long latency of memory accesses.
-For burst mode requests associated with a loop, the request sending is moved to outside of the loop as shown in the figure. The symbolic variable $B$ in the weight of the $DepM$ edge signifies how many tokens have to be consumed/buffered before the response for the next request ($data2$) become accessible for the response receiver. Assume the arbiter for the memory subsystem implements a policy which can potentially take in and serve multiple ($K$) consecutive requests from one stream, $B$ can be as big as $BurstSize_{max}*K$. 
-In the case of a round-robin arbiter, $B = BurstSize_{max}$ and for our experiment platform which uses AXI bus protocol, this number is 256. With the precedence graph, we can easily compute that the buffering for the two memory response channels needs to be increased to $B$ for the deadlocks to be resolved.
+For burst mode requests associated with a loop, the request sending is moved outside of the loop as shown in the figure. The symbolic variable $B$ in the weight of the $DepM$ edge signifies how many tokens have to be consumed/buffered before the response for the next request ($data2$) become accessible for the response receiver. Assume the arbiter for the memory subsystem implements a policy which can potentially take in and serve multiple ($K$) consecutive requests from one stream, $B$ can be as big as $BurstSize_{max}*K$. 
+In the case of a round-robin arbiter, $B = BurstSize_{max}$ and for our experiment platform which uses the AXI bus protocol, this number is 256. With the precedence graph, we can easily compute that the buffering for the two memory response channels needs to be increased to $B$ for the deadlocks to be resolved.
 \begin{figure}[htp]
 \begin{center}
 \includegraphics[width=1.05\linewidth]{fig/burstMem.pdf}
@@ -788,7 +789,7 @@ alleviated by distributing memory accesses into different processes, each runnin
 and computation are naturally overlapped and the overall throughput of the compute
 engine can be greatly improved.
 
-More specifically, several factors are considered in this instruction partitioning algorithm. The starting point is a graph $G$ thoroughly annotated with various dependency information. The group of nodes which form dependency cycles are first identified. They are associated with loop carried dependencies and are the limiting factors for how aggressively loop iterations can be overlapped. The initiation
+More specifically, several factors are considered in this instruction partitioning algorithm. The starting point is a graph $G$ thoroughly annotated with various dependency information. The group of nodes which forms dependency cycles are first identified. They are associated with loop carried dependencies and are the limiting factors for how aggressively loop iterations can be overlapped. The initiation
 interval (II) of loops are dictated by the latency of these cycles.
 As the communication channels will always add latency, it is undesirable to have
 these cycles spanning multiple sets.
@@ -802,8 +803,8 @@ memory space.
 %\subsection{The Partitioning Algorithm}
 %\label{subsec:partalgo}
 %In Algorithm~\ref{algo1}, the steps taken to achieve the aforementioned requirements are detailed.
-The steps taken to achieve the aforementioned requirements are detailed,
-In algorithm~\ref{algo1}.
+The steps taken to achieve the aforementioned requirements are detailed
+in algorithm~\ref{algo1}.
 The SCCs are collapsed into new nodes, which together with the original instruction nodes, are topologically
 sorted. The obtained directed acyclic graph is traversed and a new set is created whenever a memory operation
 or an SCC with long latency computation
@@ -811,7 +812,7 @@ is encountered. Here, long latency operations are those which cannot be complete
 one clock cycle, and
 their categorization ultimately depends on the target frequency
 of the final implementation on the FPGA. Currently, we
-leverage Xilinx's Vivado HLS to generate latency estimate for
+leverage Xilinx's Vivado HLS to generate latency estimates for
 various compute operations. With a target clock frequency of
 150MHz, for instance, floating point multiply takes four clock
 cycles while a 32 bit integer addition can be completed within
@@ -834,6 +835,7 @@ flow.
   \State memLongSCC $\gets$ LongSCCs $\cup$ memNodes
   \State allSets $\gets \{\}$
   \State curSet $\gets \{\}$
+
   \While{topoSortedNodes $\ne \emptyset$}
      \State curNode $\gets$ topoSortedNodes.pop()
      \State curSet $\gets$ curSet $\cup$ curNode
@@ -916,8 +918,8 @@ flow.
 
 \section{Experimental Evaluation}
 \label{expEval}
-To measure the benefits our approach, a set of benchmarks are pushed through our flow. The partitioning algorithm described in section~\ref{exampleAlgo} is applied together with the optimization step formulated in part~\ref{opt}. These benchmarks are kernels with non-regular control flow and memory access patterns. Their descriptions are listed in table~\ref{tab:datasize}. 
-As the input datasets are too big for on-chip buffers, and the memory accesses
+To measure the benefits our approach, a set of benchmarks are processed by our flow. The partitioning algorithm described in section~\ref{exampleAlgo} is applied together with the optimization step formulated in part~\ref{opt}. These benchmarks are kernels with non-regular control flow and memory access patterns. Their descriptions are listed in table~\ref{tab:datasize}. 
+As the input datasets are too large for on-chip buffers, and the memory accesses
 being too irregular for simple DMA, these are cases where our flow can play a significant role
 in improving the overall performance.
 
@@ -937,7 +939,7 @@ The baseline for our evaluation is the performance of each kernel executing
 on the ARM core, which is an out-of-order, dual-issue hard processor running at 667MHz. Zynq also provides two
 options for the accelerators in PL to access the main memory: 
 through the accelerator coherence port (ACP), or the high performance (HP) port. 
-ACP connects to the snoop control unit in the PS, and 
+The ACP connects to the snoop control unit in the PS, and 
 thus accesses the on-chip cache of the PS. On the other hand, the HP port connects
 directly to the memory controller, thus often incurs longer latency
 for data requests.
@@ -1009,7 +1011,7 @@ In figure~\ref{fig:acpraw},
 performance of the different implementations are presented. 
 Conventional accelerators and accelerator networks with different memory subsystem
 configurations are compared. All the numbers are normalized to the baseline.
-Design points with caches are using Xilinx System Cache IP, configured to be 64KB and 2-way associative.   
+Design points with caches use the Xilinx System Cache IP, configured to be 64KB and 2-way associative.   
 
 In all four benchmarks, conventional accelerators directly generated from software kernels actually have lower performance than the hard processor. Even with
 on-PL caches, they can only achieve throughput less than 50\% that of the baseline.
@@ -1092,7 +1094,7 @@ SpMV &Acc. Network       & 8577 & 8837& 10 & 6718  &6788 & 21\\
 
 The difference in area between the accelerator network and the conventional accelerators is effected by
 two factors. The accelerator networks always have additional costs associated with
-the FIFOs and communication primitives. We have also size the FIFOs to be larger than required to introduce more elasticity into the network. On the other hand, the accelerator generated for each individual process in the network has reduced pipeline depth, resulting in area savings.
+the FIFOs and communication primitives. Also, we have sized the FIFOs to be larger than required to introduce more elasticity into the network. On the other hand, the accelerator generated for each individual process in the network has reduced pipeline depth, resulting in area savings.
 %When the dataflow architectural template is used, there are always additional costs associated with the communication channels. Meanwhile, as
 %the original programs are partitioned into subgraphs and separately turned into hardware, the depth of the internal 
 %pipeline in each module is reduced, resulting in area savings. 
