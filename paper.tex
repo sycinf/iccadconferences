@@ -396,16 +396,14 @@ flow looks for the nearest set of basic blocks $BB'$ who are not properly post-d
 and insert the dependency edge between the branch instructions ending each member of $BB'$ and $i$. Compare to the naive predication, this approach use a single control edge to replace a sequence of edges traversing multiple branches, reducing the overall communication
 overhead in the network. Also with the elimination of unnecessary edges, the subsequent steps can be more flexible, potentially leading to more efficient final implementation.
 
-Another type of dependencies is implicitly carried by memory accesses. When
+Another type of dependencies are implicitly carried by memory accesses. When
 two memory accesses target the same location and one of
 them is a store, their order in the original program execution
 needs to be preserved--a dependency edge is added
 between them. We try to avoid adding unnecessary edges as they
 can potentially affect the instruction partitioning negatively. 
 The flow currently relies on alias analysis to perform partitioning of the memory space. No edges are inserted for accesses to disjoint memory partitions. 
-Meanwhile, for code harder to analyze, the flow can take in user annotations, complementing the overly conservative compile time analysis. 
-
-With the addition of these edges, the ordering of requests sent to the memory
+Meanwhile, for code harder to analyze, the flow can take in user annotations, complementing the overly conservative compile time analysis. With the addition of these edges, the ordering of requests sent to the memory
 subsystem is constrained to be consistent with the original program execution.
 The non-determinism caused by memory selecting amongst multiple requests no longer
 impacts the final outcome. In general, for any pair of instructions separated into two sets, the necessary ordering between them is enforced by the cut edges,
@@ -461,7 +459,7 @@ with the basic block where the barrier occurs.
 \subsubsection{Optimizing Communication v.s. Computation}
 \label{opt}
  Regardless of exactly how the instructions are partitioned, as each process performs its computation locally, the necessity to communicate with its peers can incur implementation overheads.
-For each communication channel, buffer space is to be allocated, and sender/receiver primitives also need to be inserted. Therefore, it is sometimes beneficial to duplicate some nodes after the instruction partitioning. Given sets of instruction nodes created after applying a platform-specific algorithm, for each of these set $G$, the problem of whether to copy other instruction nodes into $G$ can be formulated as an integer programming problem. 
+For each communication channel, buffer space is to be allocated, and sender/receiver primitives also need to be inserted. Therefore, it is sometimes beneficial to duplicate some nodes after the instruction partitioning. Given sets of instruction nodes created after applying a platform-specific algorithm, for each individual set $G$, the problem of whether to copy other instruction nodes into $G$ can be formulated as an integer programming problem. 
 
 Let $T$ be the set obtained with nodes duplicated into $G$, and the set of remaining nodes be $S$. Each node $i$ can be associated with a binary variable $p_i$, where $p_i = 0$ if $i \in T$ and $p_i = 1$ if $i \in S$. Meanwhile, each edge $ij$ is associated with
 a binary variable $d_{ij}$ which takes the value 1 if $i \in S$ and $j \in T$, and 0 otherwise. Finally, $w_{ij}$ is used to represent the cost of edge $ij$
@@ -499,11 +497,11 @@ an executable process is created by constructing an independent control flow gra
     \item For every instruction $j$ on which $i$ depends, 
     recreate its container basic block if it's not already
     in the CFG.
-    \item If $j$ is associated with another set of instructions, a load operation
+    \item If $j$ is assigned to another set of instructions, a load operation
     is created locally as a placeholder in its container basic block.
     \item If $i$ is producing operands for instructions assigned to 
     other sets, a store operation is inserted after $i$.
-\end{itemize}
+\end{itemize}With 
 The set of recreated basic blocks $B$ are thus associated with either the instructions assigned to the current set, or the placeholder instruction supplying them with operands. 
 %We then proceed to mirror all the relevant execution paths in the original CFG. We .
 %$d$ is used as the entry block for our new CFG. Basic blocks in the path from $d$ to
@@ -516,9 +514,9 @@ process network.
 
 To form execution paths in the new CFG, we find the nearest common dominator $d$ of all the recreated basic blocks from the original CFG. It is added to $B$ and used as the new entry block. Again from the original CFG, we trace all the paths between member basic blocks in $B$, and add the points of divergence into $B$. These points are basic blocks which cause
 the control flow to go into different members in $B$, or to basic blocks not in $B$ at all.
-With these basic blocks connected, we have a self-contained process. 
+After all member basic blocks are connected, we have a self-contained process. 
 During this construction process, for the branch instructions not already assigned to the current CFG, a load operation is created to accept a branch target token from another process. The local control flow can then be performed according to this received token. 
-Finally, if the entry block $d$ was inside a loop in the original control flow, any branch out of the set $B$ is redirected to $d$. We are essentially enclosing the process with a \textit{while(true)} loop and the execution of the new CFG will be repetitively activated by the availability of the proper tokens.
+Finally, if the entry block $d$ was inside a loop in the original control flow, any control transfer out of the set $B$ is redirected to $d$. We are essentially enclosing the process with a \textit{while(true)} loop and the execution of the new CFG will be repetitively activated by the availability of the proper tokens.
 
 
 %FIXME --- no while loop for the last partition
@@ -531,7 +529,7 @@ Finally, if the entry block $d$ was inside a loop in the original control flow, 
 \vspace{-2.0em}
 \end{figure*}
 
-In figure~\ref{fig:totalFlow}, the function below is converted from its SSA form to a process network.  A naive instruction partitioning algorithm is used in this example. The loop control flow, the memory access and the computation are separated into three different
+In figure~\ref{fig:totalFlow}, the function below is converted from its SSA form to a process network.  A naive instruction partitioning algorithm is used in this example. The loop control flow, the memory accesses and the computation are separated into three different
 processes.
 
 \begin{comment}
@@ -616,12 +614,12 @@ artificial deadlock will not occur in $PN$.
 
 Assume there is an artificial deadlock, we can go around the dependency
 cycle and examine the blocked processes $P_b \subseteq PN$. For a process $p_b$
-to be blocked at invocation of instruction $j_0$, $j_0$ is either reading from an empty FIFO, or writing to a full FIFO. For the former case, the FIFO is empty because the token's producer instruction $j_0' \in p_b'$ cannot execute, which indicates an earlier instruction  $i_k'$ in $G(p_b')$ is blocked. For the later case, the FIFO is full because the token produced by an earlier invocation $j_{-1}$ has not been taken by its corresponding consumer instruction $j''_{-1} \in p_b''$. This also indicates an earlier instruction $l_n''$ in $G(p'')$ is blocked. Apply this reasoning recursively around the circle of dependencies,
+to be blocked at instruction  invocation $j_0$, $j_0$ is either reading from an empty FIFO, or writing to a full FIFO. For the former case, the FIFO is empty because the token's producer instruction $j_0' \in p_b'$ cannot execute, which indicates an earlier instruction  $i_k'$ in $G(p_b')$ is blocked. For the later case, the FIFO is full because the token produced by an earlier invocation $j_{-1}$ has not been taken by its corresponding consumer instruction $j''_{-1} \in p_b''$. This also indicates an earlier instruction $l_n''$ in $G(p'')$ is blocked. Apply this reasoning recursively around the circle of dependencies,
 we should have a chain of precedence among instructions invocations $j_0 \succ i_k' \succ ... \succ j_0$
 or $j_0 \succ j''_{-1} \succ l_n'' \succ ... \succ j_0$ in $H$. %As all invocations of instructions in the chains come from schedules locally consistent with a single schedule $H$, 
 Both chains are self-contradictory and therefore, the scenario for artificial deadlock can never occur. 
 
-Since $H$ is derived from the original CFG, with Lemma~\ref{nondeadlock} proven, we can conclude that if each of the generated process is executed strictly according to the original program order, we will have a network free from artificial deadlock. This
+Since $H$ is derived from the original CFG, with Lemma~\ref{nondeadlock} proven, we can conclude that if each of the generated process is executed strictly according to the original program order, we will have a network free from artificial deadlocks. This
 will guarantee, for instance, when processors are used as the compute substrate, the network will produce the correct result as each process is executed according to locally consistent $G(p)$. On the other hand, when HLS is used to create hardware accelerators from processes, this guarantee may not
 hold anymore since aggressive parallelization and reordering of instructions
 would violate the consistency between $G(p)$ and $H$. 
@@ -654,7 +652,7 @@ a common HLS technique, loop pipelining, is applied to \textit{Process 1}, where
 iterations of the loop are aggressively overlapped. Every cycle, a new iteration is started. Because of the long latency of load from \textit{in[i]} and
 the multiplication, the sending of the first \textit{r2} token, $_{(0,0)}$store(r2Q,r2), is scheduled
 after many instruction invocations for later iterations. Due to the static scheduling, it can not execute until after $_{(0,2)}$store(r1Q,r1), whose
-writing to FIFO r1Q cannot happen until the previous token is consumed by 
+writing to the FIFO r1Q cannot happen until the previous token is consumed by 
 $_{(0,1)}$load(r1Q). Because of the scheduling in process 2, this load from r1Q
 occurs after $_{(0,0)}$load(r2Q), which cannot complete unless $_{(0,0)}$store(r2Q,r2)
 can send the token.  An artificial deadlock is therefore created. 
@@ -686,7 +684,7 @@ is therefore created.
 The classic approach to resolve artificial deadlock is by increasing the size of the FIFO where write is blocked~\cite{parks1995bounded}. 
 In this particular example, if the size of r1Q is increased
 from 1 to 2, then the execution of $_{(0,2)}$store(r1Q,r1) would be dependent on 
-$_{(0,0)}$load(r1Q) instead of $_{(0,1)}$load(r1Q). The cycle of dependence is broken as there will be no path of dependence from $_{(0,1)}$load(r1Q)
+$_{(0,0)}$load(r1Q) instead of $_{(0,1)}$load(r1Q). The cycle of dependence is broken as there will be no path of dependence from $_{(0,0)}$load(r1Q)
 to $_{(0,0)}$store(r2Q,r2). The deadlock no longer exists.
 
 Unfortunately, in a network implemented in hardware, the FIFO size cannot be easily increased.
@@ -695,7 +693,9 @@ Unfortunately, in a network implemented in hardware, the FIFO size cannot be eas
 %artificial deadlock. Increasing the number of slots in the FIFO can help resolve
 %this problem. 
 To determine the needed buffer space in the channels \textit{a priori}, simulations are sometimes used~\cite{buck1994ptolemy}. It relies 
-on using representative dataset as input and for certain type of problems, simulation results may not provide any guarantee, especially if the control flow is runtime data dependent. In this section, we want to analyze the interaction between FIFO
+on using representative dataset as input and% for certain type of problems, simulation results 
+may not provide any guarantees.%, especially if the control flow is runtime data dependent. 
+In this section, we want to analyze the interaction between FIFO
 sizing and intra-process instruction scheduling, 
 so we can better understand
 their joint effect on the liveness of the process network.
@@ -723,8 +723,8 @@ We can leverage it to create a more concise representation--precedence graph.
 An example of the precedence graph is shown in figure~\ref{fig:predgraph}, the schedules of instruction invocations are condensed into a small graph whose edges carry vector weights. 
 %As illustrated in the figure, in a schedule of a multiple level loop nest, the instruction invocations can be annotated with subscripts representing their position in the iteration space. For instance, instruction executed in the second iteration of the inner loop within the third iteration of the outer loop has subscript (3,2). Also, outer loop instruction
 %invocations carry 1 at the position of the vector corresponding to the inner loop level. 
-The weights of the $DepS$ edges are simply the worst case differences between the vector prefix of invocations of a pair of instructions. 
-Similarly, the $DepF$ edges corresponds to the difference in prefixes between
+The weights of the $DepS$ edges are simply the worst case differences between the vector prefixes of invocations of a pair of instructions. 
+Similarly, the weights of $DepF$ edges correspond to the differences in prefixes between
 the consumer and producer instruction invocations. Note this is directly related
 to the number of slots in the FIFO. For our example, the edge from store(r1Q,r1) to its consumer load(r1Q) carries a weight of (0,-1) when the channel has just one slot.
 It means the previous invocation of the consumer instruction needs to complete before the producer instruction can write more tokens. The $DepD$ edges, on the other hand, always have weight $\vec{0}$ as the consumer depends on the producer with the same iteration vector. In essence, this graph
@@ -779,17 +779,16 @@ In the case of a round-robin arbiter, $B = BurstSize_{max}$ and for our experime
 
 \section{A Memory Centric Instruction Partitioning Algorithm}
 \label{exampleAlgo}
-So far, we have developed a framework to generate process network from a sequential program and a static analysis method to ensure sufficient FIFO spaces are allocated to prevent artificial deadlock. This section provides a concrete application of this
+So far, we have developed a framework to generate process networks from  sequential programs and a static analysis method to ensure sufficient FIFO space is allocated to prevent artificial deadlocks. This section provides a concrete application of this
 framework to generate high performance compute engines. The discussion in section~\ref{pre2} revealed the weakness of HLS generated FPGA accelerators, which
 %is addressed by the partitioning algorithm developed in this section.
 %The problem is 
 can be
-alleviated by decoupling memory accesses into different processes, each running its own schedule. Off-chip communication
+alleviated by distributing memory accesses into different processes, each running its own schedule. Off-chip communication
 and computation are naturally overlapped and the overall throughput of the compute
 engine can be greatly improved.
 
-More specifically, several factors are considered when the instructions are partitioned
-to multiple sets. The starting point for the algorithm is a graph $G$ thoroughly annotated with various dependency information. The group of nodes which form dependency cycles are first identified. They are associated with loop carried dependencies and are the limiting factors for how aggressively loop iterations can be overlapped. The initiation
+More specifically, several factors are considered in this instruction partitioning algorithm. The starting point is a graph $G$ thoroughly annotated with various dependency information. The group of nodes which form dependency cycles are first identified. They are associated with loop carried dependencies and are the limiting factors for how aggressively loop iterations can be overlapped. The initiation
 interval (II) of loops are dictated by the latency of these cycles.
 As the communication channels will always add latency, it is undesirable to have
 these cycles spanning multiple sets.
@@ -917,7 +916,7 @@ flow.
 
 \section{Experimental Evaluation}
 \label{expEval}
-To measure the benefits our approach, a set of benchmarks are pushed through our flow. The partitioning algorithm described in section~\ref{exampleAlgo} is applied together with the optimization step formulated in part~\ref{opt}. These benchmarks are kernels with non-regular control flow and memory access patterns. Their description is listed in table~\ref{tab:datasize}. 
+To measure the benefits our approach, a set of benchmarks are pushed through our flow. The partitioning algorithm described in section~\ref{exampleAlgo} is applied together with the optimization step formulated in part~\ref{opt}. These benchmarks are kernels with non-regular control flow and memory access patterns. Their descriptions are listed in table~\ref{tab:datasize}. 
 As the input datasets are too big for on-chip buffers, and the memory accesses
 being too irregular for simple DMA, these are cases where our flow can play a significant role
 in improving the overall performance.
@@ -932,7 +931,7 @@ in improving the overall performance.
 
 
 The FPGA device used for our evaluation is Xilinx's Zynq-7000 XC7Z020 FPGA
-SoC. It contains two parts: an ARM based processing
+SoC. It contains two parts: an ARM-based processing
 system (PS), and the programmable logic (PL). 
 The baseline for our evaluation is the performance of each kernel executing
 on the ARM core, which is an out-of-order, dual-issue hard processor running at 667MHz. Zynq also provides two
@@ -1024,7 +1023,7 @@ without a reconfigurable cache. When the networks are directly connected to the 
 With the addition of caches,  
 the average runtime of the accelerator networks was reduced by 18.7\%,  while that of the conventional accelerators was cut by 45.4\%. The gap between their performance is thereby reduced from 8.4x to 5.6x. This difference in improvement is due to conventional accelerators' sensitivity to the latency of data accesses, which is also manifested by its performance degradation of 40\% when the uncached HP port is used instead of ACP. 
 
-Overall, there is a significant performance advantage in the accelerator network as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
+Overall, there is a significant performance advantage in the accelerator networks as our algorithm effectively addresses the weakness of conventional accelerators. If we compare the best results achieved with the
 accelerator networks to that of the conventional accelerators, we see improvement
 of 3.3 to 9.1 times, with an average of 5.6. 
 %This performance advantage translates to energy savings as well, as illustrated in the next section.
@@ -1062,8 +1061,8 @@ where each implementation is complemented with two different memory subsystem co
 \cline{2-8}                                                                                                                                                    
 Floyd- &Acc. Network       & 7659 &7210 &0  &8995  &8309 &19 \\
 \cline{2-8}                                                                                                             
- Warshall      &\% change &+207.5  &+104.3 & 0 & +104.4  & +79.5  & 0  \\
-  \hline                                                                           
+ Warshall      &\% change &+207.5  & +104.3 &0 & +104.4  & +79.5  & 0  \\
+  \hline                                                                          
   
   \multirow{3}{*}{}&Con.Acc  & 7672 &7490 &8 & 6573 & 5885 & 21  \\
 \cline{2-8}                                                                                                                                                    
@@ -1093,7 +1092,7 @@ SpMV &Acc. Network       & 8577 & 8837& 10 & 6718  &6788 & 21\\
 
 The difference in area between the accelerator network and the conventional accelerators is effected by
 two factors. The accelerator networks always have additional costs associated with
-the FIFOs and communication primitives. On the other hand, the accelerator generated for each individual process in the network has reduced pipeline depth, resulting in area savings.
+the FIFOs and communication primitives. We have also size the FIFOs to be larger than required to introduce more elasticity into the network. On the other hand, the accelerator generated for each individual process in the network has reduced pipeline depth, resulting in area savings.
 %When the dataflow architectural template is used, there are always additional costs associated with the communication channels. Meanwhile, as
 %the original programs are partitioned into subgraphs and separately turned into hardware, the depth of the internal 
 %pipeline in each module is reduced, resulting in area savings. 
