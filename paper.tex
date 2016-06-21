@@ -104,11 +104,11 @@
 % without further effort on your part as the last section in
 % the body of your article BEFORE References or any Appendices.
 
-\numberofauthors{0} %  in this sample file, there are a *total*
+\numberofauthors{2} %  in this sample file, there are a *total*
 % of EIGHT authors. SIX appear on the 'first-page' (for formatting
 % reasons) and the remaining two appear in the \additionalauthors section.
 %
-\begin{comment}
+
 \author{
 % You can go ahead and credit any number of authors here,
 % e.g. one 'row of three' or two rows (consisting of one row of three
@@ -136,7 +136,7 @@ John Wawrzynek \\%\titlenote{The secretary disavows any knowledge of this author
        \email{johnw@eecs.berkeley.edu}
 % 3rd. author
 }
-\end{comment}
+
 \maketitle
 \begin{abstract}
 This paper describes a general framework for
@@ -299,8 +299,8 @@ These are so-called artificial deadlocks, as their occurrence is introduced by t
 %can block on writes (responses to other processes), when a large amount of data returned are not consumed promptly. It may therefore also contribute to the development of artificial deadlocks. 
 In a process network, % generated from a sequential program, 
 these deadlocks, if left unresolved, would cause a mismatch between
-the resultant behavior of the original code and the network. To tackle this problem, many approaches were proposed over the years, most of which involves monitoring execution and dynamically incrementing FIFO sizes when deadlock occurs~\cite{parks1995bounded}\cite{Geilen:2003:REK:1765712.1765736}\cite{4217338},
-or only targets highly regular kernels.
+the resultant behavior of the original code and the network. To tackle this problem, many approaches were proposed over the years, most of which involve monitoring execution and dynamically incrementing FIFO sizes when deadlock occurs~\cite{parks1995bounded}\cite{Geilen:2003:REK:1765712.1765736}\cite{4217338},
+or only target highly regular kernels.
 %This is due to the infeasibility of analyzing deadlock for generic process networks at compile time. 
 In our flow, we ensure, by construction, each FIFO is only read/written by a single instruction in each process, which makes the generated PN easier to analyze than a generic PN. We can therefore use a static analysis framework to find the needed FIFO sizes.
 
@@ -821,7 +821,7 @@ flow.
 
 
 
-
+\setlength{\textfloatsep}{2pt}
 \begin{algorithm}[t]
   \caption{Instruction Partitioning}\label{algo1}
   \begin{algorithmic}[1]
@@ -944,6 +944,7 @@ directly to the memory controller, thus often incurs longer latency
 for data requests.
 
 \begin{table}[htbp]
+\vspace{-2.0em}
 \caption{Benchmark Descriptions}
 %\vspace{-1.2em}
 \scriptsize
@@ -982,7 +983,7 @@ for data requests.
   \hline      
   
 \end{tabular}
-\vspace{-2.0em}
+\vspace{-0.5em}
 \label{tab:datasize}
 \end{table}
 
